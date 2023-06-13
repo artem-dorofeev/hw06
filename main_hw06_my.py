@@ -12,7 +12,12 @@ CATEGORIES = {"Audio": [".mp3", ".aiff", ".m3u"],
               "Video": [".avi", ".mp4", ".mkv"],
               "Archives": [".zip", ".rar", ".tar", ".gz"]}
 
-list_folder = ("Audio", "Documents", "Photo", "Video", "Other", "Archives")
+LIST_FOLDERS_SORT = ("Audio", "Documents", "Photo",
+                     "Video", "Other", "Archives")
+
+count_files = 0
+count_unpack_arch = 0
+count_del_folder = 0
 
 
 def move_file(file: Path, root_dir: Path, categorie: str) -> None:
@@ -20,7 +25,12 @@ def move_file(file: Path, root_dir: Path, categorie: str) -> None:
     if not target_dir.exists():
         target_dir.mkdir()
     new_name = target_dir.joinpath(f"{normalize(file.stem)}{file.suffix}")
-
+    index = None
+    if new_name.exists():
+        index = len([f for f in target_dir.glob(
+            "*") if new_name.stem in f.stem])
+    new_name = new_name.with_name(
+        f"{new_name.stem}{index if index else ''}{file.suffix}")
     file.rename(new_name)
 
 
@@ -33,23 +43,26 @@ def get_categories(file: Path) -> str:
 
 
 def sort_folder(path: Path) -> None:
-
+    global count_files
     for item in path.glob("**/*"):
 
         if item.is_file():
             # print(f'this is file {item}')
+            count_files += 1
             cat = get_categories(item)
             move_file(item, path, cat)
 
 
 def del_emppty_folders(path: Path) -> None:
+    global count_del_folder
     for item in path.iterdir():
-        if item.name not in list_folder:
+        if item.name not in LIST_FOLDERS_SORT:
 
             if item.is_dir():
                 del_emppty_folders(item)
                 try:
                     item.rmdir()
+                    count_del_folder += 1
                 except OSError:
                     print(f'folder {item.name} is not emppty')
                     continue
@@ -58,16 +71,24 @@ def del_emppty_folders(path: Path) -> None:
 
 
 def upack_archive(path: Path) -> None:
+    global count_unpack_arch
     arch_path = path.joinpath("Archives")
+    if not arch_path.exists():
+        arch_path.mkdir()
     for item in arch_path.iterdir():
         # print(f'archive - {item.stem}')
         output_arch = arch_path.joinpath(item.stem)
         # print(output_arch)
         output_arch.mkdir()
         shutil.unpack_archive(item, output_arch)
+        count_unpack_arch += 1
 
 
 def main():
+    global count_files
+    global count_del_folder
+    global count_unpack_arch
+
     try:
         path = Path(sys.argv[1])
     except IndexError:
@@ -77,9 +98,11 @@ def main():
         return f"Folder with path {path} dos`n exists."
 
     sort_folder(path)
+    print(f'sorted - {count_files} files')
     del_emppty_folders(path)
-
+    print(f'deleted - {count_del_folder} folder(s)')
     upack_archive(path)
+    print(f'unpack - {count_unpack_arch} archive')
 
     return "All ok"
 

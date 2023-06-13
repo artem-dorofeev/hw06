@@ -44,10 +44,11 @@ def get_categories(file: Path) -> str:
 
 def sort_folder(path: Path) -> None:
     global count_files
-    for item in path.glob("**/*"):
+    global LIST_FOLDERS_SORT
+    objects_list = path.glob("**/*")
+    for item in [i for i in objects_list if i.name not in LIST_FOLDERS_SORT]:
 
         if item.is_file():
-            # print(f'this is file {item}')
             count_files += 1
             cat = get_categories(item)
             move_file(item, path, cat)
@@ -76,11 +77,10 @@ def upack_archive(path: Path) -> None:
     if not arch_path.exists():
         arch_path.mkdir()
     for item in arch_path.iterdir():
-        # print(f'archive - {item.stem}')
         output_arch = arch_path.joinpath(item.stem)
-        # print(output_arch)
         output_arch.mkdir()
         shutil.unpack_archive(item, output_arch)
+        item.unlink()
         count_unpack_arch += 1
 
 
@@ -98,11 +98,11 @@ def main():
         return f"Folder with path {path} dos`n exists."
 
     sort_folder(path)
-    print(f'sorted - {count_files} files')
+    print(f'Sorted - {count_files} files')
     del_emppty_folders(path)
-    print(f'deleted - {count_del_folder} folder(s)')
+    print(f'Deleted - {count_del_folder} folder')
     upack_archive(path)
-    print(f'unpack - {count_unpack_arch} archive')
+    print(f'Unpack - {count_unpack_arch} archive and delete files')
 
     return "All ok"
 
